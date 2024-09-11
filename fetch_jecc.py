@@ -1,7 +1,18 @@
 import requests
 import bs4
+import os
+from dotenv import load_dotenv
+import psycopg2
 
 JECC_URL = "http://www.jecc-ema.org/jecc/jecccfs.php"
+
+# Load environment variables from .env file
+load_dotenv()
+DATABASE_USER = os.getenv("DATABASE_USER")
+DATABASE_PASSWORD = os.getenv("DATABASE_PASSWORD")
+DATABASE_HOST = os.getenv("DATABASE_HOST")
+DATABASE_PORT = os.getenv("DATABASE_PORT")
+DATABASE_NAME = os.getenv("DATABASE_NAME")
 
 
 def fetch_jecc_logs(selected_date, selected_agency="All"):
@@ -81,10 +92,113 @@ def parse_log_row(row):
     return log_entry
 
 
+def upsert_logs_to_postgres(logs_as_json):
+    """
+    Upsert logs to PostgreSQL using batch processing.
+    """
+    try:
+        conn = psycopg2.connect(
+            database=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
+            port=DATABASE_PORT,
+        )
+        cursor = conn.cursor()
+        upsert_query = """
+            INSERT INTO jecc_logs (cfs_number, address, call_type, time, apt_suite, agency, disposition, incident_number) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            ON CONFLICT (cfs_number) DO UPDATE SET
+                address = EXCLUDED.address,
+                call_type = EXCLUDED.call_type,
+                time = EXCLUDED.time,
+                apt_suite = EXCLUDED.apt_suite,
+                agency = EXCLUDED.agency,
+                disposition = EXCLUDED.disposition,
+                incident_number = EXCLUDED.incident_number;
+        """
+        # Prepare data tuples
+        data_tuples = [
+            (
+                log["CFS #"],
+                log["Address"],
+                log["Call Type"],
+                log["Time"],
+                log["Apt/Suite"],
+                log["Agency"],
+                log["Disposition"],
+                log["Incident #"],
+            )
+            for log in logs_as_json
+        ]
+
+        # Execute batch upsert
+        psycopg2.extras.execute_batch(cursor, upsert_query, data_tuples)
+        conn.commit()
+    except Exception as e:
+        print(f"Error during database operation: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def create_table_if_not_exists():
+    try:
+        conn = psycopg2.connect(
+            database=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
+            port=DATABASE_PORT,
+        )
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS jecc_logs (
+                id SERIAL PRIMARY KEY,
+                cfs_number INT UNIQUE,
+                address TEXT NULL,
+                call_type TEXT NULL,
+                time TEXT NULL,
+                apt_suite TEXT NULL,
+                agency TEXT NULL,
+                disposition TEXT NULL,
+                incident_number TEXT NULL
+            );
+        """
+        )
+        conn.commit()
+    except Exception as e:
+        print(f"Error creating table: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def test_database_connection():
+    try:
+        conn = psycopg2.connect(
+            database=DATABASE_NAME,
+            user=DATABASE_USER,
+            password=DATABASE_PASSWORD,
+            host=DATABASE_HOST,
+            port=DATABASE_PORT,
+        )
+        print("Database connection successful")
+        conn.close()
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+
+
 if __name__ == "__main__":
+    test_database_connection()
+    create_table_if_not_exists()
+
     logs_html = fetch_jecc_logs("09/10/2024")
     logs_as_json = parse_jecc_logs(logs_html)
     for i, log in enumerate(logs_as_json):
         print(log)
         if i > 5:
             break
+
+    upsert_logs_to_postgres(logs_as_json[0:1])
