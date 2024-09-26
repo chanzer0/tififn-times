@@ -1,1 +1,3 @@
 .env
+fastify/node_modules
+fastify/package-lock.json
