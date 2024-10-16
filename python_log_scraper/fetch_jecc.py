@@ -222,15 +222,11 @@ def test_database_connection():
         print(f"Database connection failed: {e}")
 
 
-def get_yesterday_date():
-    return datetime.now().date() - timedelta(days=1)
-
-
 def main():
     test_database_connection()
     create_table_if_not_exists()
 
-    current_date = get_yesterday_date()
+    current_date = datetime.now().date()
     while True:
         print(f"Fetching data for {current_date.strftime('%m/%d/%Y')}...")
         logs_html = fetch_jecc_logs(current_date)

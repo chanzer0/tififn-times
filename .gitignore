@@ -1,3 +1,4 @@
 .env
+python_log_scraper/.env
 fastify/node_modules
 fastify/package-lock.json
