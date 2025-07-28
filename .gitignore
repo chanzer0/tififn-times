@@ -1,4 +1,130 @@
+# Environment variables
 .env
+.env.local
+.env.production
 python_log_scraper/.env
+server/.env
+
+.claude*
+claude.md
+
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 fastify/node_modules
 fastify/package-lock.json
+
+# React build
+client/dist/
+client/build/
+
+# Database
+*.db
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+
+# Geocoding progress files
+geocoding_progress.txt
+scripts/geocoding_progress.txt
+server/geocoding_progress.txt
+
+# Test and development files
+test_*.py
+*_test.py
+server/test_db_connection.py
+
+# Alembic temporary files
+alembic/versions/__pycache__/
+server/alembic/versions/__pycache__/
+
+# Python cache in subdirectories
+server/__pycache__/
+server/**/__pycache__/
+scripts/__pycache__/
+
+# Virtual environment in server directory
+server/venv/
+server/env/
+server/.venv/
+
+# Package lock files (keep package.json but not lock)
+client/package-lock.json
+
+# CDK/Infrastructure temporary files
+infra/cdk/cdk.out/
+infra/cdk/node_modules/
+infra/**/*.js
+infra/**/*.d.ts
+infra/**/cdk.context.json
+
+# Docker volumes and data
+docker-compose.override.yml
+.docker/
+docker-data/
+
+# Database backups and dumps
+*.sql
+*.dump
+backup_*.sql.gz
+
+# SSL certificates and keys
+*.pem
+*.key
+*.crt
+ssl/
+certs/
+
+# Local development overrides
+.env.development
+.env.development.local
+docker-compose.dev.yml
+docker-compose.local.yml
