@@ -23,6 +23,7 @@ export const apiService = {
     if (filters.callType) params.append('call_type', filters.callType);
     if (filters.page) params.append('page', filters.page.toString());
     if (filters.perPage) params.append('per_page', filters.perPage.toString());
+    if (filters.geocodedOnly) params.append('geocoded_only', 'true');
 
     const response = await api.get<LogsResponse>(`/logs?${params.toString()}`);
     return response.data;

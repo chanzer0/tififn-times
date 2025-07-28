@@ -96,6 +96,20 @@ class BulkGeocoder:
                 
                 query = db.query(subquery.c.address)\
                     .order_by(subquery.c.max_date.desc(), subquery.c.max_id.desc())
+            elif strategy == "most_common_first":
+                # Get addresses ordered by count of records needing geocoding
+                subquery = db.query(
+                    JeccLog.address,
+                    func.count(JeccLog.id).label('record_count'),
+                    func.max(JeccLog.id).label('max_id')
+                ).filter(and_(
+                    JeccLog.address.isnot(None),
+                    JeccLog.latitude.is_(None),
+                    JeccLog.id > start_id
+                )).group_by(JeccLog.address).subquery()
+                
+                query = db.query(subquery.c.address)\
+                    .order_by(subquery.c.record_count.desc(), subquery.c.max_id.desc())
             else:
                 # Get unique addresses ordered by first occurrence
                 query = db.query(JeccLog.address)\
@@ -320,8 +334,8 @@ class BulkGeocoder:
 
 def main():
     parser = argparse.ArgumentParser(description='Bulk geocode emergency call records')
-    parser.add_argument('--strategy', choices=['recent_first', 'oldest_first', 'id_order'], 
-                       default='recent_first', help='Processing strategy')
+    parser.add_argument('--strategy', choices=['recent_first', 'oldest_first', 'id_order', 'most_common_first'], 
+                       default='recent_first', help='Processing strategy (most_common_first maximizes records updated per API call)')
     parser.add_argument('--batch-size', type=int, default=1000, help='Batch size')
     parser.add_argument('--max-records', type=int, help='Maximum records to process (for testing)')
     parser.add_argument('--analyze-only', action='store_true', help='Only analyze dataset')

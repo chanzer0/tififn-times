@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { useLogs } from '../hooks/useLogs';
+import { useMapLogs } from '../hooks/useMapLogs';
 import { JeccLog } from '../types';
 import LogList from '../components/LogList';
 import MapComponent from '../components/MapComponent';
 import LogFilters from '../components/LogFilters';
 
 const Dashboard: React.FC = () => {
-  const { data, loading, error, updateFilters, goToPage } = useLogs({ perPage: 20 });
+  const { data, loading, error, updateFilters, goToPage } = useLogs({ perPage: 50 });
+  const { data: mapData, loading: mapLoading, error: mapError, refresh: refreshMap } = useMapLogs();
   const [selectedLog, setSelectedLog] = useState<JeccLog | null>(null);
 
   if (error) {
@@ -35,7 +37,7 @@ const Dashboard: React.FC = () => {
       </div>
       <div className="map-container">
         <MapComponent
-          logs={data?.logs || []}
+          logs={mapData?.logs || []}
           selectedLog={selectedLog}
           onLogSelect={setSelectedLog}
         />

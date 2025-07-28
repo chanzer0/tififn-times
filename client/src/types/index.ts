@@ -33,6 +33,7 @@ export interface LogFilters {
   callType?: string;
   page?: number;
   perPage?: number;
+  geocodedOnly?: boolean;
 }
 
 export interface HealthResponse {

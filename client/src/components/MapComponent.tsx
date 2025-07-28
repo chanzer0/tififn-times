@@ -103,6 +103,9 @@ const MapComponent: React.FC<MapComponentProps> = ({ logs, selectedLog, onLogSel
     primaryCallType: clusterLogs[0].call_type // Use first log's call type for pin color
   }));
 
+  // Log pin statistics
+  console.log(`📍 Displaying ${clusterData.length} pins (${logsWithCoordinates.length} total logs with coordinates)`);
+
   // Update map center based on available logs
   useEffect(() => {
     if (logsWithCoordinates.length > 0) {
@@ -172,6 +175,13 @@ const MapComponent: React.FC<MapComponentProps> = ({ logs, selectedLog, onLogSel
             {log.apt_suite && <span style={{ color: '#e0e0e0' }}>, {log.apt_suite}</span>}
           </div>
           
+          {log.geocoded_address && log.geocoded_address !== log.address && (
+            <div style={{ marginBottom: '0.5rem', fontSize: '0.85rem' }}>
+              <strong style={{ color: '#a3a3a3' }}>Geocoded:</strong>{' '}
+              <span style={{ color: '#10b981', fontStyle: 'italic' }}>{log.geocoded_address}</span>
+            </div>
+          )}
+          
           <div style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
             <strong style={{ color: '#a3a3a3' }}>Call Type:</strong>{' '}
             <span style={{ color: '#fbbf24' }}>{log.call_type || 'Unknown'}</span>
@@ -229,6 +239,13 @@ const MapComponent: React.FC<MapComponentProps> = ({ logs, selectedLog, onLogSel
           <strong style={{ color: '#a3a3a3' }}>Address:</strong>{' '}
           <span style={{ color: '#e0e0e0' }}>{logs[0].address || 'Unknown'}</span>
         </div>
+        
+        {logs[0].geocoded_address && logs[0].geocoded_address !== logs[0].address && (
+          <div style={{ marginBottom: '0.75rem', fontSize: '0.85rem' }}>
+            <strong style={{ color: '#a3a3a3' }}>Geocoded:</strong>{' '}
+            <span style={{ color: '#10b981', fontStyle: 'italic' }}>{logs[0].geocoded_address}</span>
+          </div>
+        )}
         
         {Object.entries(grouped).map(([callType, dispositions]) => (
           <details key={callType} style={{ marginBottom: '0.75rem' }}>

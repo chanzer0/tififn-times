@@ -27,8 +27,8 @@ const LogList: React.FC<LogListProps> = ({
 }) => {
   return (
     <div>
-      <div style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
-        Showing {logs.length} of {total} logs (Page {page})
+      <div style={{ marginBottom: '1rem', fontSize: '0.9rem', color: '#a3a3a3' }}>
+        Showing {logs.length} of {total} logs {perPage >= 1000 ? '(Recent)' : `(Page ${page})`}
       </div>
 
       <div className="log-list">

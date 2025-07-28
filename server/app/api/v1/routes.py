@@ -52,6 +52,7 @@ async def get_logs(
     end_date: Optional[date] = Query(None, description="End date filter"),
     agency: Optional[str] = Query(None, description="Agency filter"),
     call_type: Optional[str] = Query(None, description="Call type filter"),
+    geocoded_only: Optional[bool] = Query(None, description="Only return geocoded logs"),
     db: Session = Depends(get_db)
 ):
     """Get logs with pagination and filtering"""
@@ -64,7 +65,8 @@ async def get_logs(
         start_date=start_date,
         end_date=end_date,
         agency=agency,
-        call_type=call_type
+        call_type=call_type,
+        geocoded_only=geocoded_only
     )
     
     # Try to get from cache first
@@ -85,6 +87,9 @@ async def get_logs(
         filters.append(JeccLog.agency.ilike(f"%{agency}%"))
     if call_type:
         filters.append(JeccLog.call_type.ilike(f"%{call_type}%"))
+    if geocoded_only:
+        filters.append(JeccLog.latitude.isnot(None))
+        filters.append(JeccLog.longitude.isnot(None))
     
     if filters:
         query = query.filter(and_(*filters))

@@ -81,9 +81,93 @@ class GeocodingService:
                 formatted_address = result.get("display_name", address)
                 
                 return (lat, lon, formatted_address)
+            else:
+                # Try fallback strategies for rural addresses
+                return self._try_fallback_geocoding(address)
                 
         except (requests.RequestException, ValueError, KeyError) as e:
             print(f"Nominatim geocoding error: {e}")
+            
+        return None
+    
+    def _try_fallback_geocoding(self, address: str) -> Optional[Tuple[float, float, str]]:
+        """Try fallback strategies for rural addresses that don't geocode directly"""
+        # Extract street and city from address
+        parts = address.split(',')
+        if len(parts) < 2:
+            return None
+            
+        street_part = parts[0].strip()
+        city_part = parts[1].strip()
+        
+        # Strategy 1: Try just the street name without house number
+        street_tokens = street_part.split()
+        if len(street_tokens) > 1 and street_tokens[0].isdigit():
+            # Remove house number and try street name + city
+            street_without_number = ' '.join(street_tokens[1:])
+            fallback_query = f"{street_without_number}, {city_part}"
+            
+            result = self._geocode_nominatim_direct(fallback_query)
+            if result:
+                lat, lon, formatted = result
+                return (lat, lon, f"{address} (street-level approximation)")
+        
+        # Strategy 2: Try just the city
+        result = self._geocode_nominatim_direct(city_part)
+        if result:
+            lat, lon, formatted = result
+            return (lat, lon, f"{address} (city-level approximation)")
+        
+        # Strategy 3: Try broader area searches
+        area_queries = [
+            f"{city_part}, Johnson County, IA",
+            f"{city_part}, Iowa",
+            "Johnson County, IA"
+        ]
+        
+        for query in area_queries:
+            result = self._geocode_nominatim_direct(query)
+            if result:
+                lat, lon, formatted = result
+                return (lat, lon, f"{address} (area approximation)")
+        
+        return None
+    
+    def _geocode_nominatim_direct(self, query: str) -> Optional[Tuple[float, float, str]]:
+        """Direct Nominatim call without additional processing"""
+        params = {
+            "q": query,
+            "format": "json",
+            "limit": 1,
+            "addressdetails": 1,
+            "countrycodes": "us"
+        }
+        
+        headers = {
+            "User-Agent": "TiffinTimes/1.0 (emergency-logs-mapping)"
+        }
+        
+        try:
+            time.sleep(self.rate_limit_delay)
+            
+            response = requests.get(
+                self.base_url,
+                params=params,
+                headers=headers,
+                timeout=10
+            )
+            response.raise_for_status()
+            
+            results = response.json()
+            if results and len(results) > 0:
+                result = results[0]
+                lat = float(result["lat"])
+                lon = float(result["lon"])
+                formatted_address = result.get("display_name", query)
+                return (lat, lon, formatted_address)
+                
+        except Exception as e:
+            print(f"Direct geocoding failed for '{query}': {e}")
             
         return None
     
@@ -187,9 +271,37 @@ class GeocodingService:
     def _geocode_intersection_fallback(self, street1: str, street2: str, city_state: str) -> Optional[Tuple[float, float, str]]:
         """Fallback: geocode individual streets and calculate midpoint"""
         try:
-            # Geocode both streets
-            result1 = self._geocode_nominatim(f"{street1}, {city_state}")
-            result2 = self._geocode_nominatim(f"{street2}, {city_state}")
+            # Extract just the city name from city_state (e.g., "Swisher, IA" -> "Swisher")
+            city_only = city_state.split(',')[0].strip()
+            
+            # Try different formats for geocoding streets
+            street1_queries = [
+                f"{street1}, {city_state}",
+                f"{street1}, {city_only}",
+                f"{street1} near {city_only}, IA"
+            ]
+            
+            street2_queries = [
+                f"{street2}, {city_state}",
+                f"{street2}, {city_only}",
+                f"{street2} near {city_only}, IA"
+            ]
+            
+            # Try to geocode first street
+            result1 = None
+            for query in street1_queries:
+                print(f"   Trying street 1: {query}")
+                result1 = self._geocode_nominatim(query)
+                if result1:
+                    break
+            
+            # Try to geocode second street
+            result2 = None
+            for query in street2_queries:
+                print(f"   Trying street 2: {query}")
+                result2 = self._geocode_nominatim(query)
+                if result2:
+                    break
             
             if result1 and result2:
                 lat1, lon1, _ = result1
@@ -204,7 +316,20 @@ class GeocodingService:
                 
                 return (mid_lat, mid_lon, formatted_address)
             else:
-                print(f"   ✗ Could not geocode individual streets")
+                # If individual street geocoding fails, try more general queries
+                if not result1:
+                    print(f"   ✗ Could not geocode street 1: {street1}")
+                if not result2:
+                    print(f"   ✗ Could not geocode street 2: {street2}")
+                    
+                # Last resort: try geocoding just the city
+                city_result = self._geocode_nominatim(city_state)
+                if city_result:
+                    lat, lon, _ = city_result
+                    formatted_address = f"Near {street1} and {street2}, {city_state} (city center)"
+                    print(f"   ⚠ Using city center as approximation: ({lat}, {lon})")
+                    return (lat, lon, formatted_address)
+                    
                 return None
                 
         except Exception as e:
